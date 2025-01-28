@@ -14,15 +14,15 @@ the clean architecture principles.
 
 ## Use Cases - Application Business Rules
 **Create Task**  
-- Create tasks with unique name and due dates.
+- Create tasks with unique name and due dates.  
 **Mark Task as completed**  
-- Update a task completed to true.
+- Update a task completed to true.  
 **Mark Task as todo**  
-- Update a task completed to false.
+- Update a task completed to false.  
 **Delete Task**  
-- Delete a given task.
+- Delete a given task.  
 **List Tasks**  
-- List all tasks, can order by dueDate.
+- List all tasks, can order by dueDate.  
 
 ## Controllers, Gateways, Presenters - Interface Adapters
 **Task controller**  
