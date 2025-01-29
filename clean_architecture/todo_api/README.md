@@ -36,6 +36,3 @@ the clean architecture principles.
         - createdAt
         - updatedAt
         - deletedAt
-
-## To clarify:
-- Difference between Entities and Models
