@@ -1,7 +1,7 @@
 /**
  * @typedef {Object} TaskDTO
  * @property {string} name
- * @property {bolean} completed
+ * @property {boolean} completed
  * @property {string} dueDate
  */
 
