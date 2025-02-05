@@ -19,7 +19,8 @@ module.exports = class TaskUseCases {
   }
 
   /**
-   * @param {TaskEntity} task
+   * @param {TaskEntity} task - should refer to an interface to adere to
+   * the SOLID dependency inversion principle
    * @returns {Promise<TaskWithIDDTO>}
    */
   async createTask(task) {
@@ -40,5 +41,13 @@ module.exports = class TaskUseCases {
    */
   async deleteTask(taskID) {
     return this.db.deleteTask(taskID);
+  }
+
+  /**
+   * @param {*} filterOptions
+   * @returns {Promise<TaskWithIDDTO[]>}
+   */
+  async listTasks(filterOptions) {
+    return await this.db.listTasks(filterOptions);
   }
 };
