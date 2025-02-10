@@ -1,0 +1,17 @@
+{
+	"name": "todo_api",
+	"version": "1.0.0",
+	"description": "A simple CRUD application created with pure Node.js to study the basics of  the clean architecture principles.",
+	"main": "index.js",
+	"scripts": {
+		"test": "node --test",
+		"dev": "nodemon index.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"express": "^4.21.2",
+		"nodemon": "^3.1.9"
+	}
+}

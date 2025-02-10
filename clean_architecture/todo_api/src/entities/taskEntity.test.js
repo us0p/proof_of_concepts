@@ -60,21 +60,29 @@ describe("Testing TaskEntity", () => {
     });
   });
 
-  describe("Testing getDTO method", () => {
-    it("should return a DTO representation of the entity", () => {
-      const dateFiveDaysInTheFuture = new Date();
-      dateFiveDaysInTheFuture.setDate(dateFiveDaysInTheFuture.getDate() + 5);
-      const task = new TaskEntity(
-        "task",
-        false,
-        dateFiveDaysInTheFuture.toISOString(),
-      );
-      const dto = task.getDTO();
-      assert.deepStrictEqual(dto, {
+  describe("Testing getPublicData method", () => {
+    it("should return a POJO representation of the entity", () => {
+      const dueDate = new Date().toISOString();
+      const task = new TaskEntity("task", false, dueDate);
+      const publicData = task.getPublicData();
+      assert.deepStrictEqual(publicData, {
         name: "task",
         completed: false,
-        dueDate: dateFiveDaysInTheFuture.toISOString(),
+        dueDate,
       });
+    });
+
+    it("should return an ISO format date at the dueDate", () => {
+      const date = "05/10/1998";
+      const task = new TaskEntity("task", false, date);
+      const publicData = task.getPublicData();
+      assert.strictEqual(publicData.dueDate, new Date(date).toISOString());
+    });
+
+    it("should return null for dueDate if dueDate isn't provided", () => {
+      const task = new TaskEntity("task");
+      const publicData = task.getPublicData();
+      assert.strictEqual(publicData.dueDate, null);
     });
   });
 });

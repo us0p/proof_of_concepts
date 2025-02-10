@@ -1,5 +1,5 @@
 /**
- * @typedef {Object} TaskDTO
+ * @typedef {Object} TaskPOJO
  * @property {string} name
  * @property {boolean} completed
  * @property {string} dueDate
@@ -35,14 +35,14 @@ module.exports = class TaskEntity {
   }
 
   /**
-   * Produces a DTO from the class properties
-   * @returns {TaskDTO}
+   * Produces a POJO from the class properties
+   * @returns {TaskPOJO}
    */
-  getDTO() {
+  getPublicData() {
     return {
       name: this.name,
       completed: this.completed,
-      dueDate: this.dueDate,
+      dueDate: this.dueDate ? new Date(this.dueDate).toISOString() : null,
     };
   }
 };

@@ -7,7 +7,7 @@ const TaskUseCaseError = require("./task_use_case_error");
  */
 
 /**
- * @typedef {import("../entities/taskEntity").TaskDTO & TaskWithID} TaskWithIDDTO
+ * @typedef {import("../entities/taskEntity").TaskPOJO & TaskWithID} TaskWithIDPOJO
  */
 
 module.exports = class TaskUseCases {
@@ -19,9 +19,8 @@ module.exports = class TaskUseCases {
   }
 
   /**
-   * @param {TaskEntity} task - should refer to an interface to adere to
-   * the SOLID dependency inversion principle
-   * @returns {Promise<TaskWithIDDTO>}
+   * @param {import("../entities/taskEntity").TaskPOJO} task
+   * @returns {Promise<TaskWithIDPOJO>}
    */
   async createTask(task) {
     const duplicatedTaskName = await this.db.getTaskByName(task.name);
@@ -32,12 +31,12 @@ module.exports = class TaskUseCases {
     if (duplicatedDueDate)
       throw new TaskUseCaseError("Cannot schedule two tasks for the same time");
 
-    return await this.db.createTask(task.getDTO());
+    return await this.db.createTask(task);
   }
 
   /**
    * @param {number} taskID
-   * @returns {Promise<TaskWithIDDTO>}
+   * @returns {Promise<TaskWithIDPOJO>}
    */
   async deleteTask(taskID) {
     return this.db.deleteTask(taskID);
@@ -45,9 +44,34 @@ module.exports = class TaskUseCases {
 
   /**
    * @param {*} filterOptions
-   * @returns {Promise<TaskWithIDDTO[]>}
+   * @returns {Promise<TaskWithIDPOJO[]>}
    */
   async listTasks(filterOptions) {
     return await this.db.listTasks(filterOptions);
+  }
+
+  /**
+   * @param {number} id
+   * @param {import("../entities/taskEntity").TaskDTO} newTask
+   * @returns {Promise<TaskWithIDPOJO>}
+   */
+  async updateTask(id, newTask) {
+    if (newTask.name) {
+      const duplicatedTaskName = await this.db.getTaskByName(newTask.name);
+      if (duplicatedTaskName && duplicatedTaskName.id !== id)
+        throw new TaskUseCaseError(
+          `Task with name '${newTask.name}' already existis`,
+        );
+    }
+
+    if (newTask.dueDate) {
+      const duplicatedDueDate = await this.db.getTaskByDueDate(newTask.dueDate);
+      if (duplicatedDueDate && duplicatedDueDate.id !== id)
+        throw new TaskUseCaseError(
+          `Due date ${new Date(newTask.dueDate).toLocaleString()} already exists.`,
+        );
+    }
+
+    return this.db.updateTask(id, newTask);
   }
 };

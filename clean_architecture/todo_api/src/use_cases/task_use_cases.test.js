@@ -1,5 +1,5 @@
 const assert = require("node:assert");
-const { describe, it, before } = require("node:test");
+const { describe, it, before, mock, afterEach } = require("node:test");
 
 const TaskUseCases = require("./task_use_cases");
 const TaskEntity = require("../entities/taskEntity");
@@ -20,6 +20,10 @@ class MockInMemoryDB {
   #db = [];
   #idGenerator = 1;
 
+  /**
+   * @param {import("../entities/taskEntity").TaskDTO} taskDTO
+   * @returns {Promise<import("./task_use_cases").TaskWithIDPOJO>}
+   */
   async createTask(taskDTO) {
     const id = this.#idGenerator++;
     const taskDB = { id, ...taskDTO };
@@ -43,7 +47,7 @@ class MockInMemoryDB {
 
   /**
    * @param {number} taskID
-   * @return {Promise<import("./task_use_cases").TaskWithIDDTO|null>}
+   * @return {Promise<import("./task_use_cases").TaskWithIDPOJO|null>}
    */
   async deleteTask(taskID) {
     const taskIndex = this.#db.findIndex((task) => task.id === taskID);
@@ -52,12 +56,6 @@ class MockInMemoryDB {
     this.#db.splice(taskIndex, 1);
     return task;
   }
-
-  /**
-   * @typedef {Object} FilterOptions
-   * @property {OrderBy[]=} orderBy
-   * @property {FilterBy=} filter
-   */
 
   /**
    * @typedef {Object} OrderBy
@@ -78,11 +76,28 @@ class MockInMemoryDB {
    */
 
   /**
+   * @typedef {Object} FilterOptions
+   * @property {OrderBy[]=} orderBy
+   * @property {FilterBy=} filter
+   */
+
+  /**
    * @param {FilterOptions} filterOptions
    * @returns {Promise<DatabaseTask[]>}
    */
   async listTasks(filterOptions) {
     return this.#db;
+  }
+
+  /**
+   * @param {number} id
+   * @param {import("../entities/taskEntity").TaskDTO} newTask
+   * @returns {Promise<import("./task_use_cases").TaskWithIDPOJO | null>}
+   */
+  async updateTask(id, newTask) {
+    const task = this.#db.find((task) => task.id === id);
+    if (!task) return null;
+    return Object.assign(task, newTask);
   }
 }
 
@@ -99,20 +114,20 @@ describe("Testing TaskUseCases createTask method", () => {
     const task = new TaskEntity("task", false, "05/10/1998");
     const mockInMemoryDB = new MockInMemoryDB();
     const taskUseCases = new TaskUseCases(mockInMemoryDB);
-    const taskDTO = await taskUseCases.createTask(task);
+    const taskDTO = await taskUseCases.createTask(task.getPublicData());
     assert.deepStrictEqual(taskDTO, {
       id: 1,
-      ...task.getDTO(),
+      ...task.getPublicData(),
     });
   });
   it("should throw an error if task name is duplicated", async () => {
     const mockInMemoryDB = new MockInMemoryDB();
     const mockTask = new TaskEntity("task");
     const taskUseCases = new TaskUseCases(mockInMemoryDB);
-    await taskUseCases.createTask(mockTask);
+    await taskUseCases.createTask(mockTask.getPublicData());
     try {
       const duplicatedTask = new TaskEntity("task");
-      await taskUseCases.createTask(duplicatedTask);
+      await taskUseCases.createTask(duplicatedTask.getPublicData());
       throw Error("Should have failed with duplicated task name 'task'");
     } catch (e) {
       assert.strictEqual(e instanceof TaskUseCaseError, true);
@@ -123,14 +138,14 @@ describe("Testing TaskUseCases createTask method", () => {
     const mockInMemoryDB = new MockInMemoryDB();
     const taskUseCase = new TaskUseCases(mockInMemoryDB);
     const mockTask = new TaskEntity("task", false, "05/10/1998");
-    await taskUseCase.createTask(mockTask);
+    await taskUseCase.createTask(mockTask.getPublicData());
     try {
       const duplicatedDueDateTask = new TaskEntity(
         "another task",
         false,
         "05/10/1998",
       );
-      await taskUseCase.createTask(duplicatedDueDateTask);
+      await taskUseCase.createTask(duplicatedDueDateTask.getPublicData());
       throw Error("Should have failed with duplicated due date");
     } catch (e) {
       assert.strictEqual(e instanceof TaskUseCaseError, true);
@@ -153,18 +168,13 @@ describe("Testing TaskUseCases deleteTask method", () => {
     const mockDatabase = new MockInMemoryDB();
     const taskUseCases = new TaskUseCases(mockDatabase);
     const task = new TaskEntity("task");
-    const createdTask = await taskUseCases.createTask(task);
+    const createdTask = await taskUseCases.createTask(task.getPublicData());
     const deletedTask = await taskUseCases.deleteTask(createdTask.id);
     assert.deepStrictEqual(deletedTask, createdTask);
   });
 });
 
 describe("Testing TaskUseCases listTasks method", () => {
-  // listTasks is a simple plumber method, it passes the filter option to
-  // the database layer which actually apply the filtering logic to the
-  // query.
-  // The tests should only assert if this method is correctly passing
-  // filter to the database method
   const mockDatabase = new MockInMemoryDB();
 
   before(async () => {
@@ -175,56 +185,47 @@ describe("Testing TaskUseCases listTasks method", () => {
         i % 2 == 0,
         new Date(1998, 9, i + 1).toISOString(),
       );
-      await taskUseCases.createTask(task);
+      await taskUseCases.createTask(task.getPublicData());
     }
+
+    const tasks = await mockDatabase.listTasks();
+    const mockListTasks = mock.fn(async (filterOptions) => tasks);
+    mockDatabase.listTasks = mockListTasks;
   });
 
-  it("should return an id ordered list of all tasks", async () => {
-    const taskUseCases = new TaskUseCases(mockDatabase);
-    const tasks = await taskUseCases.listTasks();
-    const mockDBTasks = await mockDatabase.listTasks();
-    assert.deepStrictEqual(tasks, mockDBTasks);
+  afterEach(() => {
+    mockDatabase.listTasks.mock.resetCalls();
   });
-  it("should be possible to pass an array of order objects to apply to columns", async () => {
+
+  it("should be possible to pass a FilterOptions object with filter and ordering parameters", async () => {
     const taskUseCases = new TaskUseCases(mockDatabase);
     const filterOptionTestCases = [
       {
+        filter: undefined,
+        errorMessage: "should have called db method without arguments",
+      },
+      {
         filter: { orderBy: [{ column: "name" }] },
-        errorMessage: "should have ordered stasks by name",
+        errorMessage: "should have called db method with only column parameter",
       },
       {
         filter: { orderBy: [{ column: "name" }, { column: "dueDate" }] },
-        errorMessage: "should have ordered stasks by name and due date",
+        errorMessage: "should have called db method with two columns",
       },
       {
         filter: { orderBy: [{ column: "name", decreasing: true }] },
-        errorMessage: "should have ordered stasks by name in decreasing order",
+        errorMessage:
+          "should have called db method with a column and an ordering criteria",
       },
-    ];
-    for (const filterOptionTestCase of filterOptionTestCases) {
-      const tasks = await taskUseCases.listTasks(filterOptionTestCase.filter);
-      const mockDBTasks = await mockDatabase.listTasks(
-        filterOptionTestCase.filter,
-      );
-      assert.deepStrictEqual(
-        tasks,
-        mockDBTasks,
-        filterOptionTestCase.errorMessage,
-      );
-    }
-  });
-  it("should be possible to apply filters to columns", async () => {
-    const taskUseCases = new TaskUseCases(mockDatabase);
-    const filterOptionTestCases = [
       {
         filter: { filter: { column: "name", value: "task 5" } },
         errorMessage:
-          "should have returned an array with only a single task with name 'task 5'",
+          "should have called db method only with filter options for the name column",
       },
       {
         filter: { filter: { column: "completed", value: false } },
         errorMessage:
-          "should have returned an array with only tasks that aren't completed",
+          "should have called db method with only with filter options for the completed column",
       },
       {
         filter: {
@@ -234,19 +235,93 @@ describe("Testing TaskUseCases listTasks method", () => {
           },
         },
         errorMessage:
-          "should have returned only tasks between 05/10/1998 and 09/10/1998",
+          "should have called db method only with filter options for the dueDate column",
+      },
+      {
+        filter: {
+          orderBy: [{ column: "name" }],
+          filter: { column: "name", value: "task 1" },
+        },
+        errorMessage:
+          "should have called db method with a combination of ordering and filtering",
       },
     ];
     for (const filterOptionTestCase of filterOptionTestCases) {
       const tasks = await taskUseCases.listTasks(filterOptionTestCase.filter);
-      const mockDBTasks = await mockDatabase.listTasks(
-        filterOptionTestCase.filter,
+      assert.strictEqual(mockDatabase.listTasks.mock.callCount(), 1);
+      assert.deepStrictEqual(
+        mockDatabase.listTasks.mock.calls[0].arguments,
+        [filterOptionTestCase.filter],
+        filterOptionTestCase.errorMessage,
       );
       assert.deepStrictEqual(
         tasks,
-        mockDBTasks,
-        filterOptionTestCase.errorMessage,
+        await mockDatabase.listTasks.mock.calls[0].result,
+      );
+      mockDatabase.listTasks.mock.resetCalls();
+    }
+  });
+});
+
+describe("Testing TaskUseCases updateTask method", () => {
+  const mockDatabase = new MockInMemoryDB();
+
+  before(async () => {
+    for (let i = 0; i < 2; i++) {
+      const entity = new TaskEntity(
+        `task ${i + 1}`,
+        false,
+        new Date(1998, 9, i + 1).toISOString(),
+      );
+      await mockDatabase.createTask(entity.getPublicData());
+    }
+  });
+
+  it("should return null if provided id doesn't exist", async () => {
+    const useCase = new TaskUseCases(mockDatabase);
+    const entity = new TaskEntity("task");
+    const updatedTask = await useCase.updateTask(
+      Number.MAX_SAFE_INTEGER,
+      entity.getPublicData(),
+    );
+    assert.strictEqual(updatedTask, null);
+  });
+
+  it("shouldn't be possible to update the task name to an existing name", async () => {
+    const useCase = new TaskUseCases(mockDatabase);
+    const entity = new TaskEntity("task 2");
+    try {
+      await useCase.updateTask(1, entity.getPublicData());
+      throw new Error("should have failed with TaskUseCaseError");
+    } catch (e) {
+      assert.strictEqual(e instanceof TaskUseCaseError, true);
+      assert.strictEqual(e.message, "Task with name 'task 2' already existis");
+    }
+  });
+
+  it("shouldn't be possible to update the task to an existing date", async () => {
+    const useCase = new TaskUseCases(mockDatabase);
+    const entity = new TaskEntity(
+      "task 1",
+      false,
+      new Date(1998, 9, 2).toISOString(),
+    );
+    try {
+      await useCase.updateTask(1, entity.getPublicData());
+      throw new Error("should have failed with TaskUseCaseError");
+    } catch (e) {
+      assert.strictEqual(e instanceof TaskUseCaseError, true);
+      assert.strictEqual(
+        e.message,
+        `Due date ${new Date(entity.dueDate).toLocaleString()} already exists.`,
       );
     }
+  });
+
+  it("should return the updated task", async () => {
+    const useCase = new TaskUseCases(mockDatabase);
+    const entity = new TaskEntity("task 3", true, new Date(1998, 9, 3));
+    const updatedTask = await useCase.updateTask(1, entity.getPublicData());
+    assert.deepStrictEqual({ id: 1, ...entity.getPublicData() }, updatedTask);
   });
 });
