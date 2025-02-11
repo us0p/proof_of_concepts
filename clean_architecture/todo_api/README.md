@@ -36,3 +36,5 @@ the clean architecture principles.
         - createdAt
         - updatedAt
         - deletedAt
+
+- add tests from database and framework layer.

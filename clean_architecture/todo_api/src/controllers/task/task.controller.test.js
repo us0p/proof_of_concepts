@@ -114,3 +114,170 @@ describe("Testing TaskController createTask method", () => {
     }
   });
 });
+
+describe("Testing deleteTask method", () => {
+  it("should return the appropriate status and responde body given an input", async () => {
+    const testCases = [
+      {
+        taskID: Number.MAX_SAFE_INTEGER,
+        mockReturnValue: null,
+        expected: {
+          statusCode: 400,
+          data: {
+            message: `Task with ID ${Number.MAX_SAFE_INTEGER} doesn't exist`,
+          },
+        },
+      },
+      {
+        taskID: 1,
+        mockReturnValue: { name: "task", completed: false, dueDate: null },
+        expected: {
+          statusCode: 204,
+          data: undefined,
+        },
+      },
+    ];
+
+    for (const testCase of testCases) {
+      const taskUseCase = {};
+      taskUseCase.deleteTask = mock.fn(async (_) => testCase.mockReturnValue);
+      const taskController = new TaskController(taskUseCase);
+      const apiResponse = await taskController.deleteTask(testCase.taskID);
+      assert.deepStrictEqual(apiResponse, testCase.expected);
+      assert.strictEqual(taskUseCase.deleteTask.mock.callCount(), 1);
+      assert.deepStrictEqual(taskUseCase.deleteTask.mock.calls[0].arguments, [
+        testCase.taskID,
+      ]);
+    }
+  });
+});
+
+describe("Testing listTasks method", () => {
+  it("should correctly call the useCase listTask method with the appropriated filters", async () => {
+    const testCases = require("./test_cases.json");
+    const taskUseCase = {};
+    taskUseCase.listTasks = mock.fn(async (_) => []);
+    const taskController = new TaskController(taskUseCase);
+    for (const testCase of testCases) {
+      const apiResponse = await taskController.listTasks(testCase.filterParams);
+      assert.deepStrictEqual(apiResponse, testCase.expected, testCase.name);
+      assert.strictEqual(
+        taskUseCase.listTasks.mock.callCount(),
+        testCase.expectedMockCallCount,
+        testCase.name,
+      );
+      if (testCase.expectedMockCallCount > 0) {
+        assert.deepStrictEqual(
+          taskUseCase.listTasks.mock.calls[0].arguments,
+          [testCase.expectedMockArguments],
+          testCase.name,
+        );
+      }
+      taskUseCase.listTasks.mock.resetCalls();
+    }
+  });
+});
+
+describe("Testing updateTask method", () => {
+  it("should return the apprpriate responde body given an input", async () => {
+    const testCases = [
+      {
+        name: "testing invalid dueDate",
+        taskID: Number.MAX_SAFE_INTEGER,
+        body: { name: "task", dueDate: "asdf" },
+        mockReturnValue: null,
+        expectedAPIResponse: {
+          statusCode: 400,
+          data: {
+            message: `Due date 'asdf' is invalid`,
+          },
+        },
+        expectedMockCallCount: 0,
+        expectedMockCallArguments: undefined,
+      },
+      {
+        name: "testing invalid taskID",
+        taskID: Number.MAX_SAFE_INTEGER,
+        body: { name: "task" },
+        mockReturnValue: null,
+        expectedAPIResponse: {
+          statusCode: 400,
+          data: {
+            message: `Task with ID ${Number.MAX_SAFE_INTEGER} doesn't exist`,
+          },
+        },
+        expectedMockCallCount: 1,
+        expectedMockCallArguments: [
+          Number.MAX_SAFE_INTEGER,
+          { name: "task", completed: false, dueDate: null },
+        ],
+      },
+      {
+        name: "testing task updating",
+        taskID: 1,
+        body: { name: "task" },
+        mockReturnValue: {
+          id: 1,
+          name: "task",
+          completed: false,
+          dueDate: null,
+        },
+        expectedAPIResponse: {
+          statusCode: 200,
+          data: { id: 1, name: "task", completed: false, dueDate: null },
+        },
+        expectedMockCallCount: 1,
+        expectedMockCallArguments: [
+          1,
+          { name: "task", completed: false, dueDate: null },
+        ],
+      },
+    ];
+
+    for (const testCase of testCases) {
+      const taskUseCases = {};
+      taskUseCases.updateTask = mock.fn(
+        async (_, __) => testCase.mockReturnValue,
+      );
+      const taskController = new TaskController(taskUseCases);
+      const apiResponse = await taskController.updateTask(
+        testCase.taskID,
+        testCase.body,
+      );
+      assert.deepStrictEqual(
+        apiResponse,
+        testCase.expectedAPIResponse,
+        testCase.name,
+      );
+      assert.strictEqual(
+        taskUseCases.updateTask.mock.callCount(),
+        testCase.expectedMockCallCount,
+        testCase.name,
+      );
+      if (testCase.expectedMockCallCount > 0) {
+        assert.deepStrictEqual(
+          taskUseCases.updateTask.mock.calls[0].arguments,
+          testCase.expectedMockCallArguments,
+          testCase.name,
+        );
+      }
+    }
+  });
+  it("should return a status 400 with the provided error message if any use case error is raised", async () => {
+    const taskUseCases = {};
+    taskUseCases.updateTask = mock.fn(async (_, __) => {
+      throw new TaskUseCaseError("error");
+    });
+    const taskController = new TaskController(taskUseCases);
+    const apiResponse = await taskController.updateTask(1, { name: "task" });
+    assert.deepStrictEqual(apiResponse, {
+      statusCode: 400,
+      data: { message: "error" },
+    });
+    assert.strictEqual(taskUseCases.updateTask.mock.callCount(), 1);
+    assert.deepStrictEqual(taskUseCases.updateTask.mock.calls[0].arguments, [
+      1,
+      { name: "task", completed: false, dueDate: null },
+    ]);
+  });
+});

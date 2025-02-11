@@ -1,0 +1,194 @@
+[
+	{
+		"name": "ordering single column",
+		"filterParams": {
+			"order": "name"
+		},
+		"expected": {
+			"statusCode": 200,
+			"data": []
+		},
+		"expectedMockCallCount": 1,
+		"expectedMockArguments": {
+			"orderBy": [
+				{
+					"column": "name"
+				}
+			]
+		}
+	},
+	{
+		"name": "ordering single column DESC",
+		"filterParams": {
+			"order": "name,DESC"
+		},
+		"expected": {
+			"statusCode": 200,
+			"data": []
+		},
+		"expectedMockCallCount": 1,
+		"expectedMockArguments": {
+			"orderBy": [
+				{
+					"column": "name",
+					"decreasing": true
+				}
+			]
+		}
+	},
+	{
+		"name": "ordering multiple columns with one DESC",
+		"filterParams": {
+			"order": "name;completed,DESC"
+		},
+		"expected": {
+			"statusCode": 200,
+			"data": []
+		},
+		"expectedMockCallCount": 1,
+		"expectedMockArguments": {
+			"orderBy": [
+				{
+					"column": "name"
+				},
+				{
+					"column": "completed",
+					"decreasing": true
+				}
+			]
+		}
+	},
+	{
+		"name": "filtering per name column",
+		"filterParams": {
+			"filter": "name=task"
+		},
+		"expected": {
+			"statusCode": 200,
+			"data": []
+		},
+		"expectedMockCallCount": 1,
+		"expectedMockArguments": {
+			"filter": {
+				"column": "name",
+				"value": "task"
+			}
+		}
+	},
+	{
+		"name": "filtering per completed column",
+		"filterParams": {
+			"filter": "completed=true"
+		},
+		"expected": {
+			"statusCode": 200,
+			"data": []
+		},
+		"expectedMockCallCount": 1,
+		"expectedMockArguments": {
+			"filter": {
+				"column": "completed",
+				"value": true
+			}
+		}
+	},
+	{
+		"name": "filtering per invalid completed column",
+		"filterParams": {
+			"filter": "completed=asdf"
+		},
+		"expected": {
+			"statusCode": 400,
+			"data": {
+				"message": "Completed column filter must be a boolean"
+			}
+		},
+		"expectedMockCallCount": 0
+	},
+	{
+		"name": "filtering per dueDate column",
+		"filterParams": {
+			"filter": "dueDate=05/10/1998;10/10/1998"
+		},
+		"expected": {
+			"statusCode": 200,
+			"data": []
+		},
+		"expectedMockCallCount": 1,
+		"expectedMockArguments": {
+			"filter": {
+				"column": "dueDate",
+				"value": {
+					"from": "1998-05-10T03:00:00.000Z",
+					"to": "1998-10-10T03:00:00.000Z"
+				}
+			}
+		}
+	},
+	{
+		"name": "filtering per invalid dueDate column",
+		"filterParams": {
+			"filter": "dueDate=asdf"
+		},
+		"expected": {
+			"statusCode": 400,
+			"data": {
+				"message": "date range 'asdf' isn't a valid range"
+			}
+		},
+		"expectedMockCallCount": 0
+	},
+	{
+		"name": "filtering per invalid range",
+		"filterParams": {
+			"filter": "dueDate=10/10/1998;05/10/1998"
+		},
+		"expected": {
+			"statusCode": 400,
+			"data": {
+				"message": "end date can't be before start date."
+			}
+		},
+		"expectedMockCallCount": 0
+	},
+	{
+		"name": "invalid column filter",
+		"filterParams": {
+			"filter": "asdf"
+		},
+		"expected": {
+			"statusCode": 400,
+			"data": {
+				"message": "invalid column 'asdf'"
+			}
+		},
+		"expectedMockCallCount": 0
+	},
+	{
+		"name": "testing filtering and ordering at the same time",
+		"filterParams": {
+			"filter": "name=task",
+			"order": "name;completed,DESC"
+		},
+		"expected": {
+			"statusCode": 200,
+			"data": []
+		},
+		"expectedMockCallCount": 1,
+		"expectedMockArguments": {
+			"filter": {
+				"column": "name",
+				"value": "task"
+			},
+			"orderBy": [
+				{
+					"column": "name"
+				},
+				{
+					"column": "completed",
+					"decreasing": true
+				}
+			]
+		}
+	}
+]

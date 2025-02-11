@@ -58,31 +58,7 @@ class MockInMemoryDB {
   }
 
   /**
-   * @typedef {Object} OrderBy
-   * @property {string} column
-   * @property {boolean=} decreasing
-   */
-
-  /**
-   * @typedef {Object} Range
-   * @property {string} from
-   * @property {string} to
-   */
-
-  /**
-   * @typedef {Object} FilterBy
-   * @property {string} column
-   * @property {string|boolean|Range} value
-   */
-
-  /**
-   * @typedef {Object} FilterOptions
-   * @property {OrderBy[]=} orderBy
-   * @property {FilterBy=} filter
-   */
-
-  /**
-   * @param {FilterOptions} filterOptions
+   * @param {import("./task_use_cases").FilterOptions} filterOptions
    * @returns {Promise<DatabaseTask[]>}
    */
   async listTasks(filterOptions) {

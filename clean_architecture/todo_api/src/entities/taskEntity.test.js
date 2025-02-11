@@ -85,4 +85,31 @@ describe("Testing TaskEntity", () => {
       assert.strictEqual(publicData.dueDate, null);
     });
   });
+
+  // should replace calls of entity.isDueDateValid over the code base.
+  describe("Testing isEntityValid method", () => {
+    it(
+      "should return false if name is missing",
+      { todo: true },
+      async () => {},
+    );
+
+    it(
+      "should call isDueDateValid to check if dueDate is valid",
+      { todo: true },
+      async () => {},
+    );
+
+    it(
+      "should return false if completed isn't a boolean",
+      { todo: true },
+      async () => {},
+    );
+
+    it(
+      "should return true if all fields are ok",
+      { todo: true },
+      async () => {},
+    );
+  });
 });

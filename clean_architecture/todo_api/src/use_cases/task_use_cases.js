@@ -1,4 +1,3 @@
-const TaskEntity = require("../entities/taskEntity");
 const TaskUseCaseError = require("./task_use_case_error");
 
 /**
@@ -8,6 +7,30 @@ const TaskUseCaseError = require("./task_use_case_error");
 
 /**
  * @typedef {import("../entities/taskEntity").TaskPOJO & TaskWithID} TaskWithIDPOJO
+ */
+
+/**
+ * @typedef {Object} OrderBy
+ * @property {string} column
+ * @property {boolean=} decreasing
+ */
+
+/**
+ * @typedef {Object} Range
+ * @property {string} from
+ * @property {string} to
+ */
+
+/**
+ * @typedef {Object} FilterBy
+ * @property {string} column
+ * @property {string|boolean|Range} value
+ */
+
+/**
+ * @typedef {Object} FilterOptions
+ * @property {OrderBy[]=} orderBy
+ * @property {FilterBy=} filter
  */
 
 module.exports = class TaskUseCases {
@@ -36,14 +59,14 @@ module.exports = class TaskUseCases {
 
   /**
    * @param {number} taskID
-   * @returns {Promise<TaskWithIDPOJO>}
+   * @returns {Promise<TaskWithIDPOJO | null>}
    */
   async deleteTask(taskID) {
     return this.db.deleteTask(taskID);
   }
 
   /**
-   * @param {*} filterOptions
+   * @param {FilterOptions} filterOptions
    * @returns {Promise<TaskWithIDPOJO[]>}
    */
   async listTasks(filterOptions) {
@@ -53,7 +76,7 @@ module.exports = class TaskUseCases {
   /**
    * @param {number} id
    * @param {import("../entities/taskEntity").TaskDTO} newTask
-   * @returns {Promise<TaskWithIDPOJO>}
+   * @returns {Promise<?TaskWithIDPOJO>}
    */
   async updateTask(id, newTask) {
     if (newTask.name) {
