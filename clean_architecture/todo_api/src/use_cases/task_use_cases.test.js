@@ -21,12 +21,12 @@ class MockInMemoryDB {
   #idGenerator = 1;
 
   /**
-   * @param {import("../entities/taskEntity").TaskDTO} taskDTO
+   * @param {import("../entities/taskEntity").TaskPOJO} taskPOJO
    * @returns {Promise<import("./task_use_cases").TaskWithIDPOJO>}
    */
-  async createTask(taskDTO) {
+  async createTask(taskPOJO) {
     const id = this.#idGenerator++;
-    const taskDB = { id, ...taskDTO };
+    const taskDB = { id, ...taskPOJO };
     this.#db.push(taskDB);
     return taskDB;
   }
@@ -67,7 +67,7 @@ class MockInMemoryDB {
 
   /**
    * @param {number} id
-   * @param {import("../entities/taskEntity").TaskDTO} newTask
+   * @param {import("../entities/taskEntity").TaskPOJO} newTask
    * @returns {Promise<import("./task_use_cases").TaskWithIDPOJO | null>}
    */
   async updateTask(id, newTask) {
@@ -86,12 +86,12 @@ describe("Testing TaskUseCases initialization", () => {
 });
 
 describe("Testing TaskUseCases createTask method", () => {
-  it("should return the created taskDTO", async () => {
+  it("should return the created taskPOJO", async () => {
     const task = new TaskEntity("task", false, "05/10/1998");
     const mockInMemoryDB = new MockInMemoryDB();
     const taskUseCases = new TaskUseCases(mockInMemoryDB);
-    const taskDTO = await taskUseCases.createTask(task.getPublicData());
-    assert.deepStrictEqual(taskDTO, {
+    const taskPOJO = await taskUseCases.createTask(task.getPublicData());
+    assert.deepStrictEqual(taskPOJO, {
       id: 1,
       ...task.getPublicData(),
     });

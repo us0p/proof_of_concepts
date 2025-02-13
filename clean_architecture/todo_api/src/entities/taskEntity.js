@@ -19,6 +19,17 @@ module.exports = class TaskEntity {
   }
 
   /**
+   * Validates if current Entity is in a valid format
+   * @returns {boolean}
+   */
+  isEntityValid() {
+    if (!this.name) return false;
+    if (!this.isDueDateValid()) return false;
+    if (typeof this.completed !== "boolean") return false;
+    return true;
+  }
+
+  /**
    * A task can be created without due date, but a task can't be created
    * for a past date.
    * @returns {boolean}

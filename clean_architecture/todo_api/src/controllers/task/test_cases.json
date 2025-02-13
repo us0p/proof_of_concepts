@@ -61,7 +61,7 @@
 	{
 		"name": "filtering per name column",
 		"filterParams": {
-			"filter": "name=task"
+			"filter": "name,task"
 		},
 		"expected": {
 			"statusCode": 200,
@@ -78,7 +78,7 @@
 	{
 		"name": "filtering per completed column",
 		"filterParams": {
-			"filter": "completed=true"
+			"filter": "completed,true"
 		},
 		"expected": {
 			"statusCode": 200,
@@ -95,7 +95,7 @@
 	{
 		"name": "filtering per invalid completed column",
 		"filterParams": {
-			"filter": "completed=asdf"
+			"filter": "completed,asdf"
 		},
 		"expected": {
 			"statusCode": 400,
@@ -108,7 +108,7 @@
 	{
 		"name": "filtering per dueDate column",
 		"filterParams": {
-			"filter": "dueDate=05/10/1998;10/10/1998"
+			"filter": "dueDate,05/10/1998;10/10/1998"
 		},
 		"expected": {
 			"statusCode": 200,
@@ -128,7 +128,7 @@
 	{
 		"name": "filtering per invalid dueDate column",
 		"filterParams": {
-			"filter": "dueDate=asdf"
+			"filter": "dueDate,asdf"
 		},
 		"expected": {
 			"statusCode": 400,
@@ -141,7 +141,7 @@
 	{
 		"name": "filtering per invalid range",
 		"filterParams": {
-			"filter": "dueDate=10/10/1998;05/10/1998"
+			"filter": "dueDate,10/10/1998;05/10/1998"
 		},
 		"expected": {
 			"statusCode": 400,
@@ -167,7 +167,7 @@
 	{
 		"name": "testing filtering and ordering at the same time",
 		"filterParams": {
-			"filter": "name=task",
+			"filter": "name,task",
 			"order": "name;completed,DESC"
 		},
 		"expected": {

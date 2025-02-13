@@ -75,7 +75,7 @@ module.exports = class TaskUseCases {
 
   /**
    * @param {number} id
-   * @param {import("../entities/taskEntity").TaskDTO} newTask
+   * @param {import("../entities/taskEntity").TaskPOJO} newTask
    * @returns {Promise<?TaskWithIDPOJO>}
    */
   async updateTask(id, newTask) {

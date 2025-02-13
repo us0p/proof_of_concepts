@@ -12,7 +12,7 @@ describe("Testing TaskController initialization", () => {
 });
 
 describe("Testing TaskController createTask method", () => {
-  it("should fail with status code 400 and error message if due date is invalid", async () => {
+  it("should fail with status code 400 and error message if task data is invalid", async () => {
     const taskUseCase = {};
     const taskController = new TaskController(taskUseCase);
     const body = { dueDate: "invalid date" };
@@ -20,7 +20,7 @@ describe("Testing TaskController createTask method", () => {
     assert.deepStrictEqual(apiResponse, {
       statusCode: 400,
       data: {
-        message: `due date '${body.dueDate}' is invalid`,
+        message: `invalid task data`,
       },
     });
   });
@@ -189,7 +189,7 @@ describe("Testing updateTask method", () => {
         expectedAPIResponse: {
           statusCode: 400,
           data: {
-            message: `Due date 'asdf' is invalid`,
+            message: "invalid task data",
           },
         },
         expectedMockCallCount: 0,
@@ -273,6 +273,23 @@ describe("Testing updateTask method", () => {
     assert.deepStrictEqual(apiResponse, {
       statusCode: 400,
       data: { message: "error" },
+    });
+    assert.strictEqual(taskUseCases.updateTask.mock.callCount(), 1);
+    assert.deepStrictEqual(taskUseCases.updateTask.mock.calls[0].arguments, [
+      1,
+      { name: "task", completed: false, dueDate: null },
+    ]);
+  });
+  it("should return a status 500 with an 'Internal Server Error' message", async () => {
+    const taskUseCases = {};
+    taskUseCases.updateTask = mock.fn(async (_, __) => {
+      throw new Error("error");
+    });
+    const taskController = new TaskController(taskUseCases);
+    const apiResponse = await taskController.updateTask(1, { name: "task" });
+    assert.deepStrictEqual(apiResponse, {
+      statusCode: 500,
+      data: { message: "Internal Server Error" },
     });
     assert.strictEqual(taskUseCases.updateTask.mock.callCount(), 1);
     assert.deepStrictEqual(taskUseCases.updateTask.mock.calls[0].arguments, [

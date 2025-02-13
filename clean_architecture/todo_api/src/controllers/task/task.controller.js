@@ -29,11 +29,11 @@ module.exports = class TaskController {
   async createTask(body) {
     const task = new TaskEntity(body.name, body.completed, body.dueDate);
 
-    if (!task.isDueDateValid()) {
+    if (!task.isEntityValid()) {
       return {
         statusCode: 400,
         data: {
-          message: `due date '${body.dueDate}' is invalid`,
+          message: `invalid task data`,
         },
       };
     }
@@ -84,11 +84,11 @@ module.exports = class TaskController {
    */
   async updateTask(taskID, body) {
     const taskEntity = new TaskEntity(body.name, body.completed, body.dueDate);
-    if (!taskEntity.isDueDateValid())
+    if (!taskEntity.isEntityValid())
       return {
         statusCode: 400,
         data: {
-          message: `Due date '${body.dueDate}' is invalid`,
+          message: "invalid task data",
         },
       };
 
@@ -139,7 +139,7 @@ module.exports = class TaskController {
 
     if (filterParams.filter) {
       filterOptions.filter = {};
-      const [column, value] = filterParams.filter.split("=");
+      const [column, value] = filterParams.filter.split(",");
       switch (column.toLowerCase()) {
         case "name": {
           filterOptions.filter.column = "name";

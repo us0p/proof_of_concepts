@@ -42,6 +42,18 @@ app.put("/task/:id", async (req, res) => {
   }
 });
 
+app.get("/task", async (req, res) => {
+  try {
+    const apiResponse = await taskController.listTasks({
+      order: req.query.order,
+      filter: req.query.filter,
+    });
+    return res.status(apiResponse.statusCode).json(apiResponse.data).end();
+  } catch (e) {
+    return res.status(500).json({ message: e.message }).end();
+  }
+});
+
 app.listen(5000, () => {
   console.log("server listening on port 5000");
 });

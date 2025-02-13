@@ -127,7 +127,46 @@ module.exports = class SQLiteDB {
    * @param {import("../use_cases/task_use_cases").FilterOptions} filterOptions
    * @returns {Promise<import("../use_cases/task_use_cases").TaskWithIDPOJO>}
    */
-  async listTasks(filterOptions) {}
+  async listTasks(filterOptions) {
+    let orderStmt = "";
+    if (filterOptions.orderBy) {
+      let columns = "";
+      for (const order of filterOptions.orderBy) {
+        columns += ` ${order.column} ${order.decreasing ? "DESC" : "ASC"},`;
+      }
+      orderStmt = `ORDER BY ${columns.slice(0, columns.length - 1)}`;
+    }
+
+    let filterStmt = "";
+    if (filterOptions.filter) {
+      switch (filterOptions.filter.column) {
+        case "name": {
+          filterStmt = `WHERE name LIKE '%${filterOptions.filter.value}%'`;
+          break;
+        }
+        case "completed": {
+          filterStmt = `WHERE completed = ${this.#getIntFromBool(filterOptions.filter.value)}`;
+          break;
+        }
+        case "dueDate": {
+          filterStmt = `WHERE dueDate BETWEEN '${filterOptions.filter.value.from}' AND '${filterOptions.filter.value.to}'`;
+          break;
+        }
+      }
+    }
+
+    return new Promise((res, rej) => {
+      try {
+        const stmt = this.#db.prepare(
+          `SELECT * FROM task ${filterStmt} ${orderStmt};`,
+        );
+        const tasks = stmt.all();
+        res(tasks.map((t) => this.#dbRowToTaskPojo(t)));
+      } catch (e) {
+        rej(e);
+      }
+    });
+  }
 
   /**
    * @param {number} id
@@ -153,7 +192,6 @@ module.exports = class SQLiteDB {
         );
         res(this.#dbRowToTaskPojo(updatedTask));
       } catch (e) {
-        console.log(e);
         rej(e);
       }
     });

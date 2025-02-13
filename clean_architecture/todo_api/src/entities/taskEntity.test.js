@@ -1,5 +1,5 @@
 const assert = require("node:assert");
-const { describe, it } = require("node:test");
+const { describe, it, mock } = require("node:test");
 const TaskEntity = require("./taskEntity");
 
 describe("Testing TaskEntity", () => {
@@ -88,28 +88,32 @@ describe("Testing TaskEntity", () => {
 
   // should replace calls of entity.isDueDateValid over the code base.
   describe("Testing isEntityValid method", () => {
-    it(
-      "should return false if name is missing",
-      { todo: true },
-      async () => {},
-    );
+    it("should return false if name is missing", async () => {
+      const task = new TaskEntity("");
+      const isTaskValid = task.isEntityValid();
+      assert.strictEqual(isTaskValid, false);
+    });
 
-    it(
-      "should call isDueDateValid to check if dueDate is valid",
-      { todo: true },
-      async () => {},
-    );
+    it("should call isDueDateValid to check if dueDate is valid", async () => {
+      const task = new TaskEntity("task", true, "asdf");
+      task.isDueDateValid = mock.fn(() => false);
+      const isTaskValid = task.isEntityValid();
+      assert.strictEqual(isTaskValid, false);
+      assert.strictEqual(task.isDueDateValid.mock.callCount(), 1);
+    });
 
-    it(
-      "should return false if completed isn't a boolean",
-      { todo: true },
-      async () => {},
-    );
+    it("should return false if completed isn't a boolean", async () => {
+      const task = new TaskEntity("name", "asdf");
+      const isTaskValid = task.isEntityValid();
+      assert.strictEqual(isTaskValid, false);
+    });
 
-    it(
-      "should return true if all fields are ok",
-      { todo: true },
-      async () => {},
-    );
+    it("should return true if all fields are ok", async () => {
+      const today = new Date();
+      today.setDate(today.getDate() + 5);
+      const task = new TaskEntity("name", true, today.toLocaleDateString());
+      const isTaskValid = task.isEntityValid();
+      assert.strictEqual(isTaskValid, true);
+    });
   });
 });
