@@ -1,4 +1,4 @@
-module.exports = class TaskUseCaseError extends Error {
+module.exports = class UseCaseError extends Error {
   /**
    * @param {string} message
    */

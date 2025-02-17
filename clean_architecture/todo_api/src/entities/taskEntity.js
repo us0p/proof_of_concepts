@@ -1,9 +1,4 @@
-/**
- * @typedef {Object} TaskPOJO
- * @property {string} name
- * @property {boolean} completed
- * @property {string} dueDate
- */
+const TaskEntityError = require("./taskEntity.error");
 
 module.exports = class TaskEntity {
   /**
@@ -13,6 +8,8 @@ module.exports = class TaskEntity {
    * @param {string} [dueDate=null] - default to null.
    */
   constructor(name, completed = false, dueDate = null) {
+    this.#isEntityValid(name, completed, dueDate);
+
     this.name = name;
     this.completed = completed;
     this.dueDate = dueDate;
@@ -20,40 +17,51 @@ module.exports = class TaskEntity {
 
   /**
    * Validates if current Entity is in a valid format
-   * @returns {boolean}
+   * @param {string} name
+   * @param {boolean} completed
+   * @param {string} dueDate
    */
-  isEntityValid() {
-    if (!this.name) return false;
-    if (!this.isDueDateValid()) return false;
-    if (typeof this.completed !== "boolean") return false;
-    return true;
+  #isEntityValid(name, completed, dueDate) {
+    if (!name) throw new TaskEntityError("'name' is a required field");
+    if (typeof completed !== "boolean")
+      throw new TaskEntityError("'completed' must be a boolean");
+
+    !this.#isDueDateValid(dueDate);
   }
 
   /**
    * A task can be created without due date, but a task can't be created
    * for a past date.
-   * @returns {boolean}
+   * @param {?string} dueDate
    */
-  isDueDateValid() {
-    if (this.dueDate === null) return true;
+  #isDueDateValid(dueDate) {
+    if (dueDate === null) return;
 
-    const dueDate = new Date(this.dueDate);
-    if (dueDate.toString() === "Invalid Date") return false;
+    if (isNaN(new Date(dueDate)))
+      throw new TaskEntityError(`Invalid dueDate '${dueDate}'`);
 
-    const now = new Date();
-    if (dueDate >= now) return true;
-    return false;
+    const today = new Date();
+    const dueDateAsDate = new Date(dueDate);
+    if (dueDateAsDate.getUTCFullYear() < today.getUTCFullYear())
+      throw new TaskEntityError(
+        "Can't create a task with a dueDate in the past",
+      );
+
+    if (dueDateAsDate.getUTCMonth() < today.getUTCMonth())
+      throw new TaskEntityError(
+        "Can't create a task with a dueDate in the past",
+      );
+
+    if (dueDateAsDate.getUTCDate() < today.getUTCDate())
+      throw new TaskEntityError(
+        "Can't create a task with a dueDate in the past",
+      );
   }
 
   /**
-   * Produces a POJO from the class properties
-   * @returns {TaskPOJO}
+   * @param {number} id
    */
-  getPublicData() {
-    return {
-      name: this.name,
-      completed: this.completed,
-      dueDate: this.dueDate ? new Date(this.dueDate).toISOString() : null,
-    };
+  setID(id) {
+    this.id = id;
   }
 };
