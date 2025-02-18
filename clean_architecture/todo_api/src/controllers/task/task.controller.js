@@ -1,203 +1,93 @@
-const TaskEntity = require("../../entities/taskEntity");
-const TaskUseCaseError = require("../../use_cases/task_use_case_error");
-const TaskUseCases = require("../../use_cases/task_use_cases");
+const UseCaseError = require("../../use_cases/useCase.error");
+const APIResponse = require("../../presenters/api/api_response.presenter");
+const TaskEntityError = require("../../entities/taskEntity.error");
 
-/**
- * @typedef {Object} APIResponse
- * @property {number} statusCode
- * @property {*} data
- */
-
-/**
- * @typedef {Object} FilterParams
- * @property {string} [filter = undefined]
- * @property {string} [order = undefined]
- */
+const CreateTaskUseCase = require("../../use_cases/createTask/createTask.usecase");
+const DeleteTaskUseCase = require("../../use_cases/deleteTask/deleteTask.usecase");
+const UpdateTaskUseCase = require("../../use_cases/updateTask/updateTask.usecase");
+const ListTasksUseCase = require("../../use_cases/listTasks/listTask.usecase");
+const TaskFilterOptions = require("../../entities/taskFilter");
+const TaskFilterOptionError = require("../../entities/taskFilter.error");
+const TaskPOJO = require("../../entities/taskPOJO");
 
 module.exports = class TaskController {
   /**
-   * @param {TaskUseCases} taskUseCases
-   */
-  constructor(taskUseCases) {
-    this.taskUseCases = taskUseCases;
-  }
-
-  /**
-   * @param {import("../../entities/taskEntity").TaskPOJO} body
+   * @param {CreateTaskUseCase} createTaskUseCase
+   * @param {TaskPOJO} body
    * @returns {Promise<APIResponse>}
    */
-  async createTask(body) {
-    const task = new TaskEntity(body.name, body.completed, body.dueDate);
-
-    if (!task.isEntityValid()) {
-      return {
-        statusCode: 400,
-        data: {
-          message: `invalid task data`,
-        },
-      };
-    }
+  async createTask(createTaskUseCase, body) {
     try {
-      const taskWithID = await this.taskUseCases.createTask(
-        task.getPublicData(),
-      );
+      const taskPojo = new TaskPOJO(body.name, body.completed, body.dueDate);
+      const taskDTOWithID = await createTaskUseCase.execute(taskPojo);
 
-      return {
-        statusCode: 201,
-        data: taskWithID,
-      };
+      return new APIResponse(201, taskDTOWithID);
     } catch (e) {
-      if (!(e instanceof TaskUseCaseError)) throw new Error(e.message);
+      if (!(e instanceof UseCaseError) && !(e instanceof TaskEntityError))
+        return APIResponse.internalServerError();
 
-      return {
-        statusCode: 400,
-        data: {
-          message: e.message,
-        },
-      };
+      return new APIResponse(400, { message: e.message });
     }
   }
 
   /**
+   * @param {DeleteTaskUseCase} deleteTaskUseCase
    * @param {number} taskID
    * @returns {Promise<APIResponse>}
    */
-  async deleteTask(taskID) {
-    const task = await this.taskUseCases.deleteTask(taskID);
-    if (!task)
-      return {
-        statusCode: 400,
-        data: {
+  async deleteTask(deleteTaskUseCase, taskID) {
+    try {
+      const task = await deleteTaskUseCase.execute(taskID);
+      if (!task)
+        return new APIResponse(400, {
           message: `Task with ID ${taskID} doesn't exist`,
-        },
-      };
+        });
 
-    return {
-      statusCode: 204,
-      data: undefined,
-    };
-  }
-
-  /**
-   * @param {number} taskID
-   * @param {import("../../entities/taskEntity").TaskPOJO} body
-   */
-  async updateTask(taskID, body) {
-    const taskEntity = new TaskEntity(body.name, body.completed, body.dueDate);
-    if (!taskEntity.isEntityValid())
-      return {
-        statusCode: 400,
-        data: {
-          message: "invalid task data",
-        },
-      };
-
-    try {
-      const newTask = await this.taskUseCases.updateTask(
-        taskID,
-        taskEntity.getPublicData(),
-      );
-      if (!newTask)
-        return {
-          statusCode: 400,
-          data: { message: `Task with ID ${taskID} doesn't exist` },
-        };
-      return {
-        statusCode: 200,
-        data: newTask,
-      };
-    } catch (e) {
-      if (!(e instanceof TaskUseCaseError))
-        return {
-          statusCode: 500,
-          data: { message: "Internal Server Error" },
-        };
-
-      return {
-        statusCode: 400,
-        data: { message: e.message },
-      };
+      return new APIResponse(204);
+    } catch (_) {
+      return APIResponse.internalServerError();
     }
   }
 
   /**
+   * @param {UpdateTaskUseCase} updateTaskUseCase
+   * @param {number} taskID
+   * @param {TaskPOJO} body
+   * @returns {Promise<APIResponse>}
+   */
+  async updateTask(updateTaskUseCase, taskID, body) {
+    try {
+      const taskPOJO = new TaskPOJO(body.name, body.completed, body.dueDate);
+      const newTask = await updateTaskUseCase.execute(taskID, taskPOJO);
+      if (!newTask)
+        return new APIResponse(400, {
+          message: `Task with ID ${taskID} doesn't exist`,
+        });
+
+      return new APIResponse(200, newTask);
+    } catch (e) {
+      if (!(e instanceof UseCaseError) && !(e instanceof TaskEntityError))
+        return APIResponse.internalServerError();
+
+      return new APIResponse(400, { message: e.message });
+    }
+  }
+
+  /**
+   * @param {ListTasksUseCase} listTasksUseCase
    * @param {FilterParams} filterParams
    * @returns {Proimse<APIResponse>}
    */
-  async listTasks(filterParams) {
-    /** @type {import("../../use_cases/task_use_cases").FilterOptions} */
-    const filterOptions = {};
-    if (filterParams.order) {
-      const ordering = filterParams.order.split(";");
-      filterOptions.orderBy = ordering.map((order) => {
-        const [column, ordering] = order.split(",");
-        const orderBy = { column };
-        if (ordering?.toUpperCase() === "DESC") orderBy.decreasing = true;
-        return orderBy;
-      });
-    }
+  async listTasks(listTasksUseCase, filterParams) {
+    try {
+      const filterOptions = new TaskFilterOptions(filterParams);
+      const tasks = await listTasksUseCase.execute(filterOptions);
+      return new APIResponse(200, tasks);
+    } catch (e) {
+      if (!(e instanceof TaskFilterOptionError))
+        return APIResponse.internalServerError();
 
-    if (filterParams.filter) {
-      filterOptions.filter = {};
-      const [column, value] = filterParams.filter.split(",");
-      switch (column.toLowerCase()) {
-        case "name": {
-          filterOptions.filter.column = "name";
-          filterOptions.filter.value = value;
-          break;
-        }
-        case "completed": {
-          if (value !== "true" && value !== "false") {
-            return {
-              statusCode: 400,
-              data: { message: "Completed column filter must be a boolean" },
-            };
-          }
-          filterOptions.filter.column = "completed";
-          filterOptions.filter.value = value === "true" ? true : false;
-          break;
-        }
-        case "duedate": {
-          const [start, end] = value.split(";");
-          const startDate = new Date(start);
-          const endDate = new Date(end);
-          if (
-            startDate.toString() === "Invalid Date" ||
-            endDate.toString() === "Invalid Date"
-          )
-            return {
-              statusCode: 400,
-              data: {
-                message: `date range '${value}' isn't a valid range`,
-              },
-            };
-
-          if (endDate < startDate)
-            return {
-              statusCode: 400,
-              data: {
-                message: "end date can't be before start date.",
-              },
-            };
-          filterOptions.filter.column = "dueDate";
-          filterOptions.filter.value = {
-            from: startDate.toISOString(),
-            to: endDate.toISOString(),
-          };
-          break;
-        }
-        default: {
-          return {
-            statusCode: 400,
-            data: { message: `invalid column '${column}'` },
-          };
-        }
-      }
+      return new APIResponse(400, { message: e.message });
     }
-    const tasks = await this.taskUseCases.listTasks(filterOptions);
-    return {
-      statusCode: 200,
-      data: tasks,
-    };
   }
 };

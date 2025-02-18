@@ -1,28 +1,5 @@
 const TaskEntity = require("../taskEntity");
-
-/**
- * @typedef {Object} OrderBy
- * @property {string} column
- * @property {boolean=} decreasing
- */
-
-/**
- * @typedef {Object} Range
- * @property {string} from
- * @property {string} to
- */
-
-/**
- * @typedef {Object} FilterBy
- * @property {string} column
- * @property {string|boolean|Range} value
- */
-
-/**
- * @typedef {Object} FilterOptions
- * @property {OrderBy[]=} orderBy
- * @property {FilterBy=} filter
- */
+const TaskFilterOptions = require("../taskFilter");
 
 module.exports = class ITaskRepository {
   /**
@@ -58,7 +35,7 @@ module.exports = class ITaskRepository {
   }
 
   /**
-   * @param {FilterOptions} filterOptions
+   * @param {TaskFilterOptions} filterOptions
    * @returns {Promise<TaskEntity[]>}
    */
   async listTasks(filterOptions) {

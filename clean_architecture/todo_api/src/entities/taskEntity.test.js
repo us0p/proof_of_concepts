@@ -3,10 +3,11 @@ const { describe, it } = require("node:test");
 const TaskEntity = require("./taskEntity");
 const TaskEntityError = require("./taskEntity.error");
 
-describe("Testing entity validation on instantiation", () => {
+describe("Testing entity validate method", () => {
   it("should throw an error if name is missing", async () => {
     try {
-      new TaskEntity("");
+      const entity = new TaskEntity("");
+      entity.validate();
       throw new Error("should have failed with TaskEntityError");
     } catch (e) {
       assert.strictEqual(e.message, "'name' is a required field");
@@ -16,7 +17,8 @@ describe("Testing entity validation on instantiation", () => {
 
   it("should return false if completed isn't a boolean", async () => {
     try {
-      new TaskEntity("task", "asdf");
+      const entity = new TaskEntity("task", "asdf");
+      entity.validate();
       throw new Error("should have failed with TaskEntityError");
     } catch (e) {
       assert.strictEqual(e.message, "'completed' must be a boolean");
@@ -25,7 +27,8 @@ describe("Testing entity validation on instantiation", () => {
   });
   it("should throw error for date format asdf", () => {
     try {
-      new TaskEntity("task", false, "asdf");
+      const entity = new TaskEntity("task", false, "asdf");
+      entity.validate();
       throw new Error("should have failed with TaskEntityError");
     } catch (e) {
       assert.strictEqual(e.message, "Invalid dueDate 'asdf'");
@@ -35,7 +38,8 @@ describe("Testing entity validation on instantiation", () => {
 
   it("should throw error date in the past", () => {
     try {
-      new TaskEntity("task", true, "05/10/1998");
+      const entity = new TaskEntity("task", true, "05/10/1998");
+      entity.validate();
       throw new Error("should have failed with TaskEntityError");
     } catch (e) {
       assert.strictEqual(
@@ -48,6 +52,7 @@ describe("Testing entity validation on instantiation", () => {
 
   it("should create a TaskEntity instance if only name is provided", () => {
     const task = new TaskEntity("task");
+    task.validate();
     assert.strictEqual(task.name, "task");
     assert.strictEqual(task.completed, false);
     assert.strictEqual(task.dueDate, null);
@@ -61,6 +66,7 @@ describe("Testing entity validation on instantiation", () => {
     const todaySixAM = new Date();
     todaySixAM.setUTCHours(6);
     const task = new TaskEntity("task", false, todaySixAM.toISOString());
+    task.validate();
     assert.strictEqual(task.dueDate, todaySixAM.toISOString());
   });
 });

@@ -1,19 +1,23 @@
 const sqlite = require("node:sqlite");
 const path = require("node:path");
+const ITaskRepository = require("../entities/interfaces/task.repository");
+const TaskEntity = require("../entities/taskEntity");
+const TaskFilterOptions = require("../entities/taskFilter");
 
-module.exports = class SQLiteDB {
-  /** @type {DatabaseFramework} */
+module.exports = class TaskRepository extends ITaskRepository {
+  /** @type {TaskRepository} */
   static #instance;
 
   /** @type {sqlite.DatabaseSync} */
   #db;
 
   constructor() {
-    if (SQLiteDB.#instance) return SQLiteDB.#instance;
+    super();
+    if (TaskRepository.#instance) return TaskRepository.#instance;
     this.#db = new sqlite.DatabaseSync(
       path.join(__dirname, "..", "..", "db.sqlite"),
     );
-    SQLiteDB.#instance = this;
+    TaskRepository.#instance = this;
   }
 
   /**
@@ -35,35 +39,37 @@ module.exports = class SQLiteDB {
   }
 
   /**
-   * Converts a database row to a TaskPOJO.
+   * Converts a database row to a TaskEntity.
    * @param {{id: number, name: string, completed: boolean, dueDate: string | null}} row
-   * @return {import("../entities/taskEntity").TaskPOJO}
+   * @return {TaskEntity}
    */
-  #dbRowToTaskPojo(row) {
-    return {
-      id: row.id,
-      name: row.name,
-      completed: this.#getBoolFromInt(row.completed),
-      dueDate: row.dueDate,
-    };
+  #dbRowToTaskEntity(row) {
+    const task = new TaskEntity(
+      row.name,
+      this.#getBoolFromInt(row.completed),
+      row.dueDate,
+    );
+    task.setID(row.id);
+    return task;
   }
 
   /**
-   * @param {import("../entities/taskEntity").TaskPOJO} taskPOJO
-   * @returns {Promise<import("../use_cases/task_use_cases").TaskWithIDPOJO>}
+   * @param {TaskEntity} task
+   * @returns {Promise<TaskEntity>}
    */
-  async createTask(taskPOJO) {
+  async createTask(task) {
     return new Promise((res, rej) => {
       try {
         const stmt = this.#db.prepare(
           "INSERT INTO task (name, completed, dueDate) VALUES (?, ?, ?) RETURNING *;",
         );
         const createdTask = stmt.get(
-          taskPOJO.name,
-          this.#getIntFromBool(taskPOJO.completed),
-          taskPOJO.dueDate,
+          task.name,
+          this.#getIntFromBool(task.completed),
+          task.dueDate,
         );
-        res(this.#dbRowToTaskPojo(createdTask));
+
+        res(this.#dbRowToTaskEntity(createdTask));
       } catch (e) {
         rej(e);
       }
@@ -72,7 +78,7 @@ module.exports = class SQLiteDB {
 
   /**
    * @param {string} name
-   * @returns {Promise<?import("../use_cases/task_use_cases").TaskWithIDPOJO>}
+   * @returns {Promise<?TaskEntity>}
    */
   async getTaskByName(name) {
     return new Promise((res, rej) => {
@@ -80,7 +86,7 @@ module.exports = class SQLiteDB {
         const stmt = this.#db.prepare("SELECT * FROM task WHERE name = ?;");
         const dbTask = stmt.get(name);
         if (!dbTask) res(null);
-        res(this.#dbRowToTaskPojo(dbTask));
+        res(this.#dbRowToTaskEntity(dbTask));
       } catch (e) {
         rej(e);
       }
@@ -89,7 +95,7 @@ module.exports = class SQLiteDB {
 
   /**
    * @param {string} dueDate
-   * @returns {Promise<?import("../use_cases/task_use_cases").TaskWithIDPOJO>}
+   * @returns {Promise<?TaskEntity>}
    */
   async getTaskByDueDate(dueDate) {
     return new Promise((res, rej) => {
@@ -97,7 +103,7 @@ module.exports = class SQLiteDB {
         const stmt = this.#db.prepare("SELECT * FROM task WHERE dueDate = ?;");
         const task = stmt.get(dueDate);
         if (!task) res(null);
-        res(this.#dbRowToTaskPojo(task));
+        res(this.#dbRowToTaskEntity(task));
       } catch (e) {
         rej(e);
       }
@@ -106,7 +112,7 @@ module.exports = class SQLiteDB {
 
   /**
    * @param {number} taskID
-   * @return {Promise<?import("./task_use_cases").TaskWithIDPOJO|null>}
+   * @return {Promise<?TaskEntity>}
    */
   async deleteTask(taskID) {
     return new Promise((res, rej) => {
@@ -116,7 +122,7 @@ module.exports = class SQLiteDB {
         );
         const task = stmt.get(taskID);
         if (!task) res(null);
-        res(this.#dbRowToTaskPojo(task));
+        res(this.#dbRowToTaskEntity(task));
       } catch (e) {
         rej(e);
       }
@@ -124,8 +130,8 @@ module.exports = class SQLiteDB {
   }
 
   /**
-   * @param {import("../use_cases/task_use_cases").FilterOptions} filterOptions
-   * @returns {Promise<import("../use_cases/task_use_cases").TaskWithIDPOJO>}
+   * @param {TaskFilterOptions} filterOptions
+   * @returns {Promise<TaskEntity[]>}
    */
   async listTasks(filterOptions) {
     let orderStmt = "";
@@ -138,18 +144,18 @@ module.exports = class SQLiteDB {
     }
 
     let filterStmt = "";
-    if (filterOptions.filter) {
-      switch (filterOptions.filter.column) {
+    if (filterOptions.filterBy) {
+      switch (filterOptions.filterBy.column) {
         case "name": {
-          filterStmt = `WHERE name LIKE '%${filterOptions.filter.value}%'`;
+          filterStmt = `WHERE name LIKE '%${filterOptions.filterBy.value}%'`;
           break;
         }
         case "completed": {
-          filterStmt = `WHERE completed = ${this.#getIntFromBool(filterOptions.filter.value)}`;
+          filterStmt = `WHERE completed = ${this.#getIntFromBool(filterOptions.filterBy.value)}`;
           break;
         }
         case "dueDate": {
-          filterStmt = `WHERE dueDate BETWEEN '${filterOptions.filter.value.from}' AND '${filterOptions.filter.value.to}'`;
+          filterStmt = `WHERE dueDate BETWEEN '${filterOptions.filterBy.value.from}' AND '${filterOptions.filterBy.value.to}'`;
           break;
         }
       }
@@ -161,7 +167,7 @@ module.exports = class SQLiteDB {
           `SELECT * FROM task ${filterStmt} ${orderStmt};`,
         );
         const tasks = stmt.all();
-        res(tasks.map((t) => this.#dbRowToTaskPojo(t)));
+        res(tasks.map((t) => this.#dbRowToTaskEntity(t)));
       } catch (e) {
         rej(e);
       }
@@ -170,8 +176,8 @@ module.exports = class SQLiteDB {
 
   /**
    * @param {number} id
-   * @param {import("../entities/taskEntity").TaskPOJO} newTask
-   * @returns {Promise<import("../use_cases/task_use_cases").TaskWithIDPOJO>}
+   * @param {TaskEntity} newTask
+   * @returns {Promise<?TaskEntity>}
    */
   async updateTask(id, newTask) {
     return new Promise((res, rej) => {
@@ -190,7 +196,7 @@ module.exports = class SQLiteDB {
           task.dueDate,
           id,
         );
-        res(this.#dbRowToTaskPojo(updatedTask));
+        res(this.#dbRowToTaskEntity(updatedTask));
       } catch (e) {
         rej(e);
       }

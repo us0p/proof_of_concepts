@@ -2,16 +2,18 @@ const TaskEntity = require("../../entities/taskEntity");
 
 module.exports = class TaskDTO {
   /**
-   * @param {number} id
    * @param {string} name
    * @param {boolean} completed
    * @param {?string} dueDate
+   * @param {number} [id]
    */
-  constructor(id, name, completed, dueDate) {
-    this.id = id;
+  constructor(name, completed, dueDate, id) {
     this.name = name;
     this.completed = completed;
     this.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
+    if (id) {
+      this.id = id;
+    }
   }
 
   /**
@@ -20,10 +22,10 @@ module.exports = class TaskDTO {
    */
   static fromEntity(entity) {
     return new TaskDTO(
-      entity.id,
       entity.name,
       entity.completed,
       entity.dueDate,
+      entity.id,
     );
   }
 };

@@ -10,7 +10,7 @@ module.exports = class ListTasksUseCase {
   }
 
   /**
-   * @param {import("../../entities/interfaces/task.repository").FilterOptions} filterOptions
+   * @param {TaskFilterOptions} filterOptions
    * @returns {Promise<TaskDTO[]>}
    */
   async execute(filterOptions) {

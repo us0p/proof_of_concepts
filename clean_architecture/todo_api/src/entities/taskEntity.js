@@ -8,8 +8,6 @@ module.exports = class TaskEntity {
    * @param {string} [dueDate=null] - default to null.
    */
   constructor(name, completed = false, dueDate = null) {
-    this.#isEntityValid(name, completed, dueDate);
-
     this.name = name;
     this.completed = completed;
     this.dueDate = dueDate;
@@ -21,12 +19,12 @@ module.exports = class TaskEntity {
    * @param {boolean} completed
    * @param {string} dueDate
    */
-  #isEntityValid(name, completed, dueDate) {
-    if (!name) throw new TaskEntityError("'name' is a required field");
-    if (typeof completed !== "boolean")
+  validate() {
+    if (!this.name) throw new TaskEntityError("'name' is a required field");
+    if (typeof this.completed !== "boolean")
       throw new TaskEntityError("'completed' must be a boolean");
 
-    !this.#isDueDateValid(dueDate);
+    !this.#isDueDateValid(this.dueDate);
   }
 
   /**
@@ -41,18 +39,11 @@ module.exports = class TaskEntity {
       throw new TaskEntityError(`Invalid dueDate '${dueDate}'`);
 
     const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
     const dueDateAsDate = new Date(dueDate);
-    if (dueDateAsDate.getUTCFullYear() < today.getUTCFullYear())
-      throw new TaskEntityError(
-        "Can't create a task with a dueDate in the past",
-      );
+    dueDateAsDate.setUTCHours(0, 0, 0, 0);
 
-    if (dueDateAsDate.getUTCMonth() < today.getUTCMonth())
-      throw new TaskEntityError(
-        "Can't create a task with a dueDate in the past",
-      );
-
-    if (dueDateAsDate.getUTCDate() < today.getUTCDate())
+    if (dueDateAsDate < today)
       throw new TaskEntityError(
         "Can't create a task with a dueDate in the past",
       );

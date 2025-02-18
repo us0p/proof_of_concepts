@@ -1,4 +1,6 @@
 const ITaskRepository = require("../../entities/interfaces/task.repository");
+const TaskEntity = require("../../entities/taskEntity");
+const TaskPOJO = require("../../entities/taskPOJO");
 const TaskDTO = require("../interfaces/task.dto");
 const UseCaseError = require("../useCase.error");
 
@@ -12,29 +14,38 @@ module.exports = class UpdateTaskUseCase {
 
   /**
    * @param {number} id
-   * @param {TaskDTO} newTask
+   * @param {TaskPOJO} newTask
    * @returns {Promise<?TaskDTO>}
    */
   async execute(id, newTask) {
-    if (newTask.name) {
-      const duplicatedTaskName = await this.repo.getTaskByName(newTask.name);
+    const newTaskEntity = new TaskEntity(
+      newTask.name,
+      newTask.completed,
+      newTask.dueDate,
+    );
+    newTaskEntity.validate();
+
+    if (newTaskEntity.name) {
+      const duplicatedTaskName = await this.repo.getTaskByName(
+        newTaskEntity.name,
+      );
       if (duplicatedTaskName && duplicatedTaskName.id !== id)
         throw new UseCaseError(
-          `Task with name '${newTask.name}' already existis`,
+          `Task with name '${newTaskEntity.name}' already existis`,
         );
     }
 
-    if (newTask.dueDate) {
+    if (newTaskEntity.dueDate) {
       const duplicatedDueDate = await this.repo.getTaskByDueDate(
-        newTask.dueDate,
+        newTaskEntity.dueDate,
       );
       if (duplicatedDueDate && duplicatedDueDate.id !== id)
         throw new UseCaseError(
-          `Due date ${new Date(newTask.dueDate).toLocaleString()} already exists.`,
+          `Due date ${new Date(newTaskEntity.dueDate).toLocaleString()} already exists.`,
         );
     }
 
-    const task = await this.repo.updateTask(id, newTask);
+    const task = await this.repo.updateTask(id, newTaskEntity);
     return task ? TaskDTO.fromEntity(task) : null;
   }
 };

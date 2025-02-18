@@ -4,8 +4,22 @@ const UpdateTaskUseCase = require("./updateTask.usecase");
 const TaskEntity = require("../../entities/taskEntity");
 const TaskDTO = require("../interfaces/task.dto");
 const UseCaseError = require("../useCase.error");
+const TaskPOJO = require("../../entities/taskPOJO");
+const TaskEntityError = require("../../entities/taskEntity.error");
 
 describe("Testing UpdateTaskUseCase", () => {
+  it("should throw an error is taskPOJO is in an invalid state", async () => {
+    const task = new TaskPOJO("", "fasd", "asdf");
+    const mockDatabase = {};
+    const updateTaskUseCase = new UpdateTaskUseCase(mockDatabase);
+    try {
+      await updateTaskUseCase.execute(1, task);
+      throw new Error("should have failed");
+    } catch (e) {
+      assert.strictEqual(e instanceof TaskEntityError, true);
+      assert.strictEqual(e.message, "'name' is a required field");
+    }
+  });
   it("shouldn't be possible to update the task name to an existing name", async () => {
     const mockDatabase = {};
     const existingTask = new TaskEntity("task");
@@ -15,9 +29,9 @@ describe("Testing UpdateTaskUseCase", () => {
     mockDatabase.updateTask = mock.fn(async (_, __) => null);
 
     const updateTaskUseCase = new UpdateTaskUseCase(mockDatabase);
-    const entity = new TaskEntity("task");
+    const pojo = new TaskPOJO("task");
     try {
-      await updateTaskUseCase.execute(1, TaskDTO.fromEntity(entity));
+      await updateTaskUseCase.execute(1, pojo);
       throw new Error("should have failed with UseCaseError");
     } catch (e) {
       assert.strictEqual(e instanceof UseCaseError, true);
@@ -35,15 +49,15 @@ describe("Testing UpdateTaskUseCase", () => {
     mockDatabase.updateTask = mock.fn(async (_, __) => null);
 
     const updateTaskUseCase = new UpdateTaskUseCase(mockDatabase);
-    const entity = new TaskEntity("task 1", false, duplicatedTaskDueDate);
+    const pojo = new TaskPOJO("task 1", false, duplicatedTaskDueDate);
     try {
-      await updateTaskUseCase.execute(1, TaskDTO.fromEntity(entity));
+      await updateTaskUseCase.execute(1, pojo);
       throw new Error("should have failed with UseCaseError");
     } catch (e) {
       assert.strictEqual(e instanceof UseCaseError, true);
       assert.strictEqual(
         e.message,
-        `Due date ${new Date(entity.dueDate).toLocaleString()} already exists.`,
+        `Due date ${new Date(pojo.dueDate).toLocaleString()} already exists.`,
       );
     }
   });
@@ -54,10 +68,10 @@ describe("Testing UpdateTaskUseCase", () => {
     mockDatabase.getTaskByDueDate = mock.fn(async (_) => null);
     mockDatabase.updateTask = mock.fn(async (_, __) => null);
     const updateTaskUseCase = new UpdateTaskUseCase(mockDatabase);
-    const entity = new TaskEntity("task");
+    const pojo = new TaskPOJO("task");
     const updatedTask = await updateTaskUseCase.execute(
       Number.MAX_SAFE_INTEGER,
-      TaskDTO.fromEntity(entity),
+      pojo,
     );
     assert.strictEqual(updatedTask, null);
   });
@@ -71,11 +85,8 @@ describe("Testing UpdateTaskUseCase", () => {
     mockDatabase.updateTask = mock.fn(async (_, __) => entity);
 
     const updateTaskUseCase = new UpdateTaskUseCase(mockDatabase);
-    const newEntity = new TaskEntity("task 3");
-    const updatedTask = await updateTaskUseCase.execute(
-      1,
-      TaskDTO.fromEntity(newEntity),
-    );
+    const newPojo = new TaskPOJO("task 3");
+    const updatedTask = await updateTaskUseCase.execute(1, newPojo);
     assert.deepStrictEqual(TaskDTO.fromEntity(entity), updatedTask);
   });
 });
